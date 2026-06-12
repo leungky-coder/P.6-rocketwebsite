@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水火箭發射模擬器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Lucide 圖示庫 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* 確保所有按鈕與滑桿在停用時的樣式 */
+    input:disabled, select:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800 font-sans p-4 md:p-8 relative">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- 標題與分享區塊 -->
+    <header class="bg-blue-600 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold flex items-center gap-2">
+          <i data-lucide="rocket" class="w-8 h-8"></i>
+          水火箭發射模擬器
+        </h1>
+        <p class="text-blue-100 mt-2">調整參數，發射你的專屬水火箭，並學習背後的科學原理！</p>
+      </div>
+      <button id="btn-share" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors text-white py-2 px-4 rounded-xl flex items-center gap-2 font-semibold shadow-sm border border-white/30">
+        <i data-lucide="qr-code" class="w-5 h-5"></i>
+        分享給朋友
+      </button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- 控制台 (左側) -->
+      <div class="bg-white p-6 rounded-2xl shadow-md lg:col-span-1 space-y-6 border border-gray-100">
+        <h2 class="text-xl font-bold border-b pb-2 mb-4">發射控制台</h2>
+
+        <!-- 水壓 -->
+        <div class="space-y-2">
+          <label class="flex items-center justify-between text-sm font-semibold">
+            <span class="flex items-center gap-1"><i data-lucide="wind" class="w-4 h-4 text-blue-500"></i> 水壓 (Pressure)</span>
+            <span id="val-pressure" class="text-blue-600">60 psi</span>
+          </label>
+          <input type="range" id="input-pressure" min="20" max="100" value="60" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+        </div>
+
+        <!-- 發射角度 -->
+        <div class="space-y-2">
+          <label class="flex items-center justify-between text-sm font-semibold">
+            <span class="flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-4 h-4 text-orange-500"></i> 發射角度 (Angle)</span>
+            <span id="val-angle" class="text-orange-600">45°</span>
+          </label>
+          <input type="range" id="input-angle" min="10" max="90" value="45" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+        </div>
+
+        <!-- 水量 -->
+        <div class="space-y-2">
+          <label class="flex items-center justify-between text-sm font-semibold">
+            <span class="flex items-center gap-1"><i data-lucide="droplets" class="w-4 h-4 text-cyan-500"></i> 水量 (Water Volume)</span>
+            <span id="val-water" class="text-cyan-600">33%</span>
+          </label>
+          <input type="range" id="input-water" min="0" max="100" value="33" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-600" />
+        </div>
+
+        <!-- 機身重量 -->
+        <div class="space-y-2">
+          <label class="flex items-center justify-between text-sm font-semibold">
+            <span class="flex items-center gap-1"><i data-lucide="scale" class="w-4 h-4 text-purple-500"></i> 機身重量 (Empty Weight)</span>
+            <span id="val-weight" class="text-purple-600">100 g</span>
+          </label>
+          <input type="range" id="input-weight" min="30" max="250" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+        </div>
+
+        <!-- 尾翼形狀 -->
+        <div class="space-y-2">
+          <label class="flex items-center gap-1 text-sm font-semibold mb-2">
+            <i data-lucide="scissors" class="w-4 h-4 text-red-500"></i> 尾翼形狀 (Fin Shape)
+          </label>
+          <select id="input-fin" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="無">無 (不穩定，阻力極大)</option>
+            <option value="矩形">矩形 (中等阻力)</option>
+            <option value="三角形" selected>三角形 (低阻力，穩定)</option>
+            <option value="後掠翼">後掠翼 (極低阻力，極穩定)</option>
+          </select>
+        </div>
+
+        <!-- 按鈕 -->
+        <div class="pt-4 flex gap-3">
+          <button id="btn-launch" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg">
+            <i data-lucide="play" class="w-5 h-5"></i> 發射！
+          </button>
+          <button id="btn-reset" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors disabled:opacity-50">
+            重置
+          </button>
+        </div>
+      </div>
+
+      <!-- 模擬視窗與結果 (右側) -->
+      <div class="lg:col-span-2 flex flex-col gap-6">
+        <div class="bg-white p-2 rounded-2xl shadow-md border border-gray-100 overflow-hidden relative">
+          <!-- Canvas 容器，保持比例 -->
+          <div class="w-full aspect-video bg-blue-50 rounded-xl overflow-hidden relative">
+            <canvas id="sim-canvas" width="800" height="450" class="w-full h-full object-contain absolute top-0 left-0"></canvas>
+          </div>
+        </div>
+
+        <!-- 飛行數據 -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white p-4 rounded-2xl shadow-md border border-gray-100 flex flex-col items-center justify-center">
+            <span class="text-gray-500 text-sm font-semibold mb-1">飛行距離 (Distance)</span>
+            <span class="text-3xl font-bold text-blue-600"><span id="res-distance">0</span> <span class="text-base text-gray-500 font-normal">m</span></span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl shadow-md border border-gray-100 flex flex-col items-center justify-center">
+            <span class="text-gray-500 text-sm font-semibold mb-1">最高高度 (Max Height)</span>
+            <span class="text-3xl font-bold text-orange-500"><span id="res-height">0</span> <span class="text-base text-gray-500 font-normal">m</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 科學原理區塊 -->
+    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 mt-8">
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <span class="bg-blue-100 text-blue-600 p-2 rounded-lg">🔬</span> 
+        科學原理分析
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- 水壓 -->
+        <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+          <h3 class="font-bold text-blue-800 text-lg mb-2 flex items-center gap-2">
+            <i data-lucide="wind" class="w-5 h-5"></i> 水壓的影響
+          </h3>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            水壓代表瓶內空氣被壓縮的程度。<b>壓力越大，儲存的位能越多</b>。當噴嘴打開時，高壓空氣會以更大的力量將水向下推擠，根據牛頓第三運動定律（作用力與反作用力），水火箭將獲得更大的向上推力。
+          </p>
+        </div>
+
+        <!-- 角度 -->
+        <div class="bg-orange-50 p-5 rounded-xl border border-orange-100">
+          <h3 class="font-bold text-orange-800 text-lg mb-2 flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i> 發射角度的影響
+          </h3>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            在真空環境中，45度角能拋射最遠。但在現實有<b>空氣阻力</b>的情況下，最佳角度通常略低於45度（約35-40度）。角度過高會飛很高但距離短；角度過低則會過早墜地。
+          </p>
+        </div>
+
+        <!-- 水量 -->
+        <div class="bg-cyan-50 p-5 rounded-xl border border-cyan-100">
+          <h3 class="font-bold text-cyan-800 text-lg mb-2 flex items-center gap-2">
+            <i data-lucide="droplets" class="w-5 h-5"></i> 水量的影響
+          </h3>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            水是反作用力的質量來源。若沒有水（0%），空氣極快噴出但質量太輕，動量極小；若水太多（&gt;70%），火箭會因為太重而飛不高。<b>最佳水量通常在瓶子容積的 30% 到 40% 之間</b>。
+          </p>
+        </div>
+
+        <!-- 重量 -->
+        <div class="bg-purple-50 p-5 rounded-xl border border-purple-100">
+          <h3 class="font-bold text-purple-800 text-lg mb-2 flex items-center gap-2">
+            <i data-lucide="scale" class="w-5 h-5"></i> 機身重量的影響
+          </h3>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            過重的機身需要極大的推力才能升空，導致初始速度慢；但過輕的機身（慣性小）在升空後，速度很容易被空氣阻力抵銷而迅速減速。因此，需要找到<b>慣性與起飛重量的完美平衡</b>。
+          </p>
+        </div>
+
+        <!-- 尾翼 -->
+        <div class="bg-red-50 p-5 rounded-xl border border-red-100 md:col-span-2 lg:col-span-2">
+          <h3 class="font-bold text-red-800 text-lg mb-2 flex items-center gap-2">
+            <i data-lucide="scissors" class="w-5 h-5"></i> 尾翼形狀的影響 (空氣動力學)
+          </h3>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            尾翼的作用是將火箭的<b>壓力中心 (Center of Pressure)</b> 移到重心 (Center of Gravity) 之後，確保飛行時箭頭朝前，不會在空中翻滾。
+            <br/><br/>
+            • <b>無尾翼：</b>火箭會在空中翻滾，產生極大空氣阻力，飛行距離極短。<br/>
+            • <b>矩形尾翼：</b>提供基本的穩定性，但前緣面積較大，產生中等阻力。<br/>
+            • <b>三角形 / 後掠翼：</b>採用流線型設計，能有效切割空氣，提供極佳穩定性的同時<b>將空氣阻力降到最低</b>，是飛得最遠的設計。
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- QR Code 彈出視窗 -->
+  <div id="modal-qr" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl p-8 max-w-sm w-full relative flex flex-col items-center shadow-2xl">
+      <button id="btn-close-qr" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <div class="bg-blue-100 p-3 rounded-full mb-4 text-blue-600">
+        <i data-lucide="qr-code" class="w-8 h-8"></i>
+      </div>
+      
+      <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">掃描分享</h3>
+      <p class="text-sm text-gray-500 mb-6 text-center">
+        使用手機相機掃描下方的 QR Code，<br/>即可在其他裝置上開啟這個模擬器！
+      </p>
+      
+      <div class="bg-white p-3 rounded-xl shadow-inner border-2 border-gray-100 mb-6 flex justify-center items-center">
+        <img id="qr-image" src="" alt="分享用的 QR Code" class="w-48 h-48 object-contain" />
+      </div>
+      
+      <div class="w-full space-y-2">
+        <label class="text-xs font-semibold text-gray-500 ml-1">或者複製以下連結：</label>
+        <input type="text" id="input-url" readonly class="w-full p-3 text-sm text-gray-600 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 cursor-text" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化 Lucide 圖示
+    lucide.createIcons();
+
+    // 狀態變數
+    let pressure = 60;
+    let angle = 45;
+    let waterVolume = 33;
+    let weight = 100;
+    let finShape = '三角形';
+    
+    let status = 'idle'; // 'idle', 'flying', 'finished'
+    
+    let physicsState = {
+      x: 0, y: 0, vx: 0, vy: 0, path: [], isFlying: false, totalMass: 0, cd: 0, maxHeight: 0
+    };
+    let animationId = null;
+
+    // 尾翼參數資料庫
+    const finData = {
+      '無': { cd: 0.8 },
+      '矩形': { cd: 0.4 },
+      '三角形': { cd: 0.2 },
+      '後掠翼': { cd: 0.1 }
+    };
+
+    // DOM 元素選取
+    const elPressure = document.getElementById('input-pressure');
+    const valPressure = document.getElementById('val-pressure');
+    const elAngle = document.getElementById('input-angle');
+    const valAngle = document.getElementById('val-angle');
+    const elWater = document.getElementById('input-water');
+    const valWater = document.getElementById('val-water');
+    const elWeight = document.getElementById('input-weight');
+    const valWeight = document.getElementById('val-weight');
+    const elFin = document.getElementById('input-fin');
+
+    const btnLaunch = document.getElementById('btn-launch');
+    const btnReset = document.getElementById('btn-reset');
+    
+    const resDistance = document.getElementById('res-distance');
+    const resHeight = document.getElementById('res-height');
+
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 取得當前網址 (處理 iframe / 沙盒環境)
+    let currentUrl = window.location.href;
+    if (currentUrl === 'about:srcdoc' || currentUrl.startsWith('blob:') || currentUrl.includes('sandbox')) {
+      currentUrl = 'https://example.com/water-rocket-simulator';
+    }
+
+    // 事件監聽：更新輸入數值
+    function updateInputs() {
+      if (status === 'flying') return; // 飛行中不允許修改
+
+      pressure = Number(elPressure.value);
+      valPressure.innerText = pressure + ' psi';
+
+      angle = Number(elAngle.value);
+      valAngle.innerText = angle + '°';
+
+      waterVolume = Number(elWater.value);
+      valWater.innerText = waterVolume + '%';
+
+      weight = Number(elWeight.value);
+      valWeight.innerText = weight + ' g';
+
+      finShape = elFin.value;
+
+      // 如果還沒飛行，改變參數時重繪初始畫面
+      resetSimulation();
+    }
+
+    elPressure.addEventListener('input', updateInputs);
+    elAngle.addEventListener('input', updateInputs);
+    elWater.addEventListener('input', updateInputs);
+    elWeight.addEventListener('input', updateInputs);
+    elFin.addEventListener('change', updateInputs);
+
+    // 畫面繪製邏輯
+    function drawScene(state) {
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // 1. 繪製背景
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
+      skyGradient.addColorStop(0, '#87CEEB'); 
+      skyGradient.addColorStop(1, '#E0F6FF');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#4CAF50'; 
+      const groundY = height - 40;
+      ctx.fillRect(0, groundY, width, 40);
+
+      // 2. 比例尺 (網格)
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < width; i += 100) {
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, groundY);
+      }
+      for (let j = groundY; j > 0; j -= 50) {
+        ctx.moveTo(0, j);
+        ctx.lineTo(width, j);
+      }
+      ctx.stroke();
+
+      // 距離標記
+      ctx.fillStyle = '#333';
+      ctx.font = '12px Arial';
+      for (let i = 100; i < width; i += 100) {
+        ctx.fillText(`${i}m`, i + 2, groundY + 15);
+      }
+
+      // 3. 繪製軌跡
+      if (state.path.length > 0) {
+        ctx.strokeStyle = 'rgba(255, 69, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        state.path.forEach(p => {
+          ctx.lineTo(p.x, groundY - p.y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]); 
+      }
+
+      // 4. 繪製發射台
+      ctx.fillStyle = '#555';
+      ctx.fillRect(-10, groundY - 20, 20, 20);
+
+      // 5. 繪製水火箭
+      const rx = state.x;
+      const ry = groundY - state.y;
+      const rotation = state.isFlying ? Math.atan2(-state.vy, state.vx) : -angle * (Math.PI / 180);
+
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.rotate(rotation);
+
+      // 火箭主體
+      ctx.fillStyle = '#FFF';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(15, 0); 
+      ctx.lineTo(5, -4);
+      ctx.lineTo(-10, -4);
+      ctx.lineTo(-10, 4);
+      ctx.lineTo(5, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 畫尾翼
+      ctx.fillStyle = '#FF5722';
+      if (finShape === '矩形') {
+        ctx.fillRect(-10, -8, 8, 4);
+        ctx.fillRect(-10, 4, 8, 4);
+      } else if (finShape === '三角形') {
+        ctx.beginPath(); ctx.moveTo(-2, -4); ctx.lineTo(-10, -10); ctx.lineTo(-10, -4); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-2, 4); ctx.lineTo(-10, 10); ctx.lineTo(-10, 4); ctx.fill();
+      } else if (finShape === '後掠翼') {
+        ctx.beginPath(); ctx.moveTo(2, -4); ctx.lineTo(-8, -12); ctx.lineTo(-12, -4); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(2, 4); ctx.lineTo(-8, 12); ctx.lineTo(-12, 4); ctx.fill();
+      }
+
+      // 火箭噴射火焰
+      if (state.isFlying && state.y < 50 && state.vy > 0) {
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-25, -3);
+        ctx.lineTo(-20, 0);
+        ctx.lineTo(-25, 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // 啟動模擬
+    function startSimulation() {
+      status = 'flying';
+      updateUIState();
+      
+      const emptyMass = weight;
+      const waterMass = waterVolume * 10; 
+      const totalMass = emptyMass + waterMass;
+      
+      let baseV0 = 0;
+      if (waterVolume === 0) {
+        baseV0 = pressure * 0.1;
+      } else {
+        const exhaustVelocity = Math.sqrt(pressure) * 10;
+        const airVolume = 100 - waterVolume;
+        const effectiveAir = airVolume / 100; 
+        
+        const usableWaterRatio = Math.min(1, airVolume / waterVolume);
+        const effectiveWaterMass = waterMass * usableWaterRatio;
+
+        const rawV0 = (effectiveWaterMass * exhaustVelocity) / totalMass;
+
+        const energyMultiplier = Math.pow(effectiveAir, 0.5) * 2.5; 
+        baseV0 = (rawV0 * energyMultiplier) * 0.45;
+
+        baseV0 -= (weight * 0.05); 
+        if (baseV0 < 3) baseV0 = 3; 
+      }
+      
+      const rad = angle * (Math.PI / 180);
+      
+      physicsState = {
+        x: 0,
+        y: 0,
+        vx: baseV0 * Math.cos(rad),
+        vy: baseV0 * Math.sin(rad),
+        path: [{x: 0, y: 0}],
+        isFlying: true,
+        totalMass: totalMass,
+        cd: finData[finShape].cd,
+        maxHeight: 0
+      };
+
+      if (animationId) cancelAnimationFrame(animationId);
+      animationLoop();
+    }
+
+    // 動畫迴圈
+    function animationLoop() {
+      if (!physicsState.isFlying) return;
+
+      const dt = 0.08; 
+      const g = 9.81; 
+
+      const v = Math.sqrt(physicsState.vx ** 2 + physicsState.vy ** 2);
+      
+      const flyingMass = weight; 
+      const dragForce = 0.05 * physicsState.cd * v * v; 
+      const ax_drag = -dragForce * (physicsState.vx / v) / flyingMass;
+      const ay_drag = -dragForce * (physicsState.vy / v) / flyingMass;
+
+      physicsState.vx += ax_drag * dt;
+      physicsState.vy += (-g + ay_drag) * dt;
+      physicsState.x += physicsState.vx * dt * 2; 
+      physicsState.y += physicsState.vy * dt * 2;
+
+      if (physicsState.y > physicsState.maxHeight) physicsState.maxHeight = physicsState.y;
+
+      if (Math.random() < 0.3) {
+        physicsState.path.push({ x: physicsState.x, y: physicsState.y });
+      }
+
+      if (physicsState.y <= 0) {
+        physicsState.y = 0;
+        physicsState.isFlying = false;
+        status = 'finished';
+        
+        resDistance.innerText = Math.max(0, physicsState.x).toFixed(1);
+        resHeight.innerText = physicsState.maxHeight.toFixed(1);
+        
+        updateUIState();
+      }
+
+      drawScene(physicsState);
+
+      if (physicsState.isFlying) {
+        animationId = requestAnimationFrame(animationLoop);
+      }
+    }
+
+    // 重置模擬
+    function resetSimulation() {
+      status = 'idle';
+      if (animationId) cancelAnimationFrame(animationId);
+      
+      physicsState = { x: 0, y: 0, vx: 0, vy: 0, path: [], isFlying: false, totalMass: 0, cd: 0, maxHeight: 0 };
+      
+      // 不清除結果數字，只重置圖形與狀態
+      updateUIState();
+      drawScene(physicsState);
+    }
+
+    // 處理介面狀態 (啟用/停用按鈕與拉桿)
+    function updateUIState() {
+      const isFlying = (status === 'flying');
+      
+      elPressure.disabled = isFlying;
+      elAngle.disabled = isFlying;
+      elWater.disabled = isFlying;
+      elWeight.disabled = isFlying;
+      elFin.disabled = isFlying;
+      btnReset.disabled = isFlying;
+
+      if (isFlying) {
+        btnLaunch.disabled = true;
+        btnLaunch.innerHTML = '飛行中...';
+        btnLaunch.className = "flex-1 bg-gray-400 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed";
+      } else {
+        btnLaunch.disabled = false;
+        btnLaunch.innerHTML = '<i data-lucide="play" class="w-5 h-5"></i> 發射！';
+        btnLaunch.className = "flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg";
+        lucide.createIcons(); // 重新渲染剛塞入的 icon
+      }
+    }
+
+    // 綁定按鈕事件
+    btnLaunch.addEventListener('click', startSimulation);
+    btnReset.addEventListener('click', () => {
+      resDistance.innerText = '0';
+      resHeight.innerText = '0';
+      resetSimulation();
+    });
+
+    // QR Code 互動邏輯
+    const modalQr = document.getElementById('modal-qr');
+    const btnShare = document.getElementById('btn-share');
+    const btnCloseQr = document.getElementById('btn-close-qr');
+    const qrImage = document.getElementById('qr-image');
+    const inputUrl = document.getElementById('input-url');
+
+    btnShare.addEventListener('click', () => {
+      inputUrl.value = currentUrl;
+      qrImage.src = `https://quickchart.io/qr?text=${encodeURIComponent(currentUrl)}&size=200`;
+      
+      // 錯誤處理 (備用圖片)
+      qrImage.onerror = () => {
+        qrImage.onerror = null;
+        qrImage.src = "https://placehold.co/200x200?text=QR+Error";
+      };
+
+      modalQr.classList.remove('hidden');
+    });
+
+    btnCloseQr.addEventListener('click', () => {
+      modalQr.classList.add('hidden');
+    });
+    
+    // 點擊網址全選
+    inputUrl.addEventListener('click', (e) => e.target.select());
+
+    // 初始化畫布
+    window.onload = () => {
+      resetSimulation();
+    };
+
+  </script>
+</body>
+</html>
